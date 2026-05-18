@@ -1,7 +1,8 @@
 import { useAuth } from "../contexts/AuthContext";
+import { Outlet } from "react-router-dom";
 import Sidebar from "../components/layout/Sidebar";
 
-const PrivateLayout = ({ children }) => {
+const PrivateLayout = () => {
   const { user } = useAuth();
 
   return (
@@ -10,8 +11,8 @@ const PrivateLayout = ({ children }) => {
       {/* SIDEBAR */}
       <Sidebar />
 
-      {/* MAIN CONTENT AREA */}
-      <div className="flex-1 flex flex-col ml-[100px] lg:ml-[280px] transition-all duration-300">
+      {/* MAIN CONTENT */}
+      <div className="flex-1 flex flex-col">
 
         {/* TOP BAR */}
         <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
@@ -31,7 +32,7 @@ const PrivateLayout = ({ children }) => {
 
         {/* PAGE CONTENT */}
         <main className="flex-1 p-6 lg:p-10 overflow-y-auto">
-          {children}
+          <Outlet />
         </main>
 
       </div>
