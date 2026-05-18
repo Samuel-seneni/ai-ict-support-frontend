@@ -1,19 +1,39 @@
 import { useAuth } from "../contexts/AuthContext";
+import Sidebar from "../components/layout/Sidebar";
 
 const PrivateLayout = ({ children }) => {
   const { user } = useAuth();
 
   return (
-    <div style={{ display: "flex" }}>
-      {/* Sidebar (optional later) */}
+    <div className="flex min-h-screen bg-gray-50">
 
-      <div style={{ flex: 1 }}>
-        {/* Top bar */}
-        <div style={{ padding: 10, borderBottom: "1px solid #ddd" }}>
-          Welcome: {user?.email}
-        </div>
+      {/* SIDEBAR */}
+      <Sidebar />
 
-        <main style={{ padding: 20 }}>{children}</main>
+      {/* MAIN CONTENT AREA */}
+      <div className="flex-1 flex flex-col ml-[100px] lg:ml-[280px] transition-all duration-300">
+
+        {/* TOP BAR */}
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6 shadow-sm">
+
+          <div className="text-sm text-gray-600">
+            Welcome back,{" "}
+            <span className="font-semibold text-blue-600">
+              {user?.fullName || user?.email || "User"}
+            </span>
+          </div>
+
+          <div className="text-xs text-gray-500 hidden sm:block">
+            Smart ICT Desk Dashboard
+          </div>
+
+        </header>
+
+        {/* PAGE CONTENT */}
+        <main className="flex-1 p-6 lg:p-10 overflow-y-auto">
+          {children}
+        </main>
+
       </div>
     </div>
   );

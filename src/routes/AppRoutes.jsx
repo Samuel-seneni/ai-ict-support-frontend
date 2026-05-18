@@ -5,58 +5,36 @@ import PrivateLayout from "../layouts/PrivateLayout";
 
 import ProtectedRoute from "./ProtectedRoute";
 
-// Public pages
+// Pages
 import Home from "../pages/public/Home";
 import About from "../pages/public/About";
 import FAQ from "../pages/public/FAQ";
 import Contact from "../pages/public/Contact";
 
-// Private pages
 import Dashboard from "../pages/private/Dashboard";
 import Tickets from "../pages/private/Tickets";
+
+// AUTH
+import Login from "../pages/auth/Login";
+import Register from "../pages/auth/Register";
+import ForgotPassword from "../pages/auth/ForgotPassword";
 
 const AppRoutes = () => {
   return (
     <Routes>
 
-      {/* 🌍 PUBLIC ROUTES */}
-      <Route
-        path="/"
-        element={
-          <PublicLayout>
-            <Home />
-          </PublicLayout>
-        }
-      />
+      {/* PUBLIC */}
+      <Route path="/" element={<PublicLayout><Home /></PublicLayout>} />
+      <Route path="/about" element={<PublicLayout><About /></PublicLayout>} />
+      <Route path="/faq" element={<PublicLayout><FAQ /></PublicLayout>} />
+      <Route path="/contact" element={<PublicLayout><Contact /></PublicLayout>} />
 
-      <Route
-        path="/about"
-        element={
-          <PublicLayout>
-            <About />
-          </PublicLayout>
-        }
-      />
+      {/* AUTH */}
+      <Route path="/signin" element={<Login />} />
+      <Route path="/signup" element={<Register />} />
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
-      <Route
-        path="/faq"
-        element={
-          <PublicLayout>
-            <FAQ />
-          </PublicLayout>
-        }
-      />
-
-      <Route
-        path="/contact"
-        element={
-          <PublicLayout>
-            <Contact />
-          </PublicLayout>
-        }
-      />
-{/*
-      {/* 🔐 PRIVATE ROUTES */}
+      {/* PRIVATE */}
       <Route
         path="/dashboard"
         element={
@@ -78,9 +56,8 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
-      
 
-    </Routes> 
+    </Routes>
   );
 };
 
