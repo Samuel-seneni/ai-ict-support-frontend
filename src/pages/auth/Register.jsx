@@ -4,7 +4,7 @@ import { useAuth } from "../../contexts/AuthContext";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { updateProfile } from "firebase/auth";
 
-import logo from "../../assets/Logo.png";
+import logo from "../../assets/Ictlogo.png";
 
 const SignUp = () => {
   const { register } = useAuth();
@@ -74,10 +74,15 @@ const SignUp = () => {
 
       <div className="w-full max-w-md bg-white shadow-xl rounded-3xl p-8">
 
-        {/* LOGO */}
-        <div className="text-center mb-4">
-          <img src={logo} alt="Logo" className="h-16 mx-auto" />
-        </div>
+        {/* LOGO (FIXED) */}
+      
+<div className="flex justify-center mb-6">
+  <div className="p-3 bg-blue-50 rounded-2xl shadow-sm border border-blue-100">
+    <img src={logo} alt="Logo"
+      className="h-14 w-auto object-contain"
+    />
+  </div>
+</div>
 
         <h2 className="text-3xl font-bold text-center text-blue-600">
           Create Account
@@ -87,14 +92,12 @@ const SignUp = () => {
           Smart ICT Desk Registration
         </p>
 
-        {/* SUCCESS */}
         {success && (
           <div className="bg-green-100 text-green-700 p-3 rounded-xl mt-4 text-sm">
             {success}
           </div>
         )}
 
-        {/* ERROR */}
         {error && (
           <div className="bg-red-100 text-red-600 p-3 rounded-xl mt-4 text-sm">
             {error}
@@ -108,7 +111,7 @@ const SignUp = () => {
             name="firstName"
             placeholder="First Name"
             onChange={handleChange}
-            className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-400"
+            className="w-full p-3 border rounded-xl"
             required
           />
 
@@ -117,7 +120,7 @@ const SignUp = () => {
             name="lastName"
             placeholder="Last Name"
             onChange={handleChange}
-            className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-400"
+            className="w-full p-3 border rounded-xl"
             required
           />
 
@@ -126,18 +129,17 @@ const SignUp = () => {
             name="email"
             placeholder="Email"
             onChange={handleChange}
-            className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-400"
+            className="w-full p-3 border rounded-xl"
             required
           />
 
-          {/* PASSWORD */}
           <div className="relative">
             <input
               type={showPassword ? "text" : "password"}
               name="password"
               placeholder="Password"
               onChange={handleChange}
-              className="w-full p-3 border rounded-xl pr-10 focus:ring-2 focus:ring-blue-400"
+              className="w-full p-3 border rounded-xl pr-10"
               required
             />
             <div
@@ -148,14 +150,13 @@ const SignUp = () => {
             </div>
           </div>
 
-          {/* CONFIRM PASSWORD */}
           <div className="relative">
             <input
               type={showConfirm ? "text" : "password"}
               name="confirmPassword"
               placeholder="Confirm Password"
               onChange={handleChange}
-              className="w-full p-3 border rounded-xl pr-10 focus:ring-2 focus:ring-blue-400"
+              className="w-full p-3 border rounded-xl pr-10"
               required
             />
             <div
@@ -169,28 +170,33 @@ const SignUp = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold hover:bg-blue-700 transition"
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold"
           >
             {loading ? "Creating Account..." : "Sign Up"}
           </button>
 
         </form>
 
-        <div className="text-center mt-6 space-y-2">
-          <p className="text-sm text-gray-600">
-            Already have an account?
-          </p>
+        <div className="text-center mt-6 text-sm space-y-2">
 
-          <Link to="/signin" className="text-blue-600 font-semibold">
-            Sign In
-          </Link>
+  <p className="text-gray-600">
+    Already have an account?
+  </p>
 
-          <br />
+  <Link to="/signin" className="text-blue-600 font-semibold">
+    Sign In
+  </Link>
 
-          <Link to="/" className="text-gray-500 text-sm hover:text-blue-600">
-            ← Back to Home
-          </Link>
-        </div>
+  <br />
+
+  <Link
+    to="/"
+    className="text-gray-500 text-sm hover:text-blue-600"
+  >
+    ← Back to Home
+  </Link>
+
+</div>
 
       </div>
     </div>

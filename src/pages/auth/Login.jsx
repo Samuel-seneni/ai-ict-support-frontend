@@ -5,8 +5,7 @@ import { FaEye, FaEyeSlash, FaCheckCircle } from "react-icons/fa";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "../../firebase/firebase";
 
-import logo from "../../assets/logo.png";
-
+import logo from "../../assets/Ictlogo.png";
 const SignIn = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -34,10 +33,7 @@ const SignIn = () => {
 
       setSuccess("Login successful 🎉");
 
-      setTimeout(() => {
-        navigate("/dashboard");
-      }, 1000);
-
+      setTimeout(() => navigate("/dashboard"), 1000);
     } catch (err) {
       setError("Login failed. Check credentials.");
     } finally {
@@ -46,14 +42,12 @@ const SignIn = () => {
   };
 
   const handleResetPassword = async () => {
-    if (!form.email) {
-      return setError("Enter your email first");
-    }
+    if (!form.email) return setError("Enter your email first");
 
     try {
       await sendPasswordResetEmail(auth, form.email);
       setResetMsg("Password reset email sent ✔");
-    } catch (err) {
+    } catch {
       setError("Failed to send reset email");
     }
   };
@@ -63,16 +57,23 @@ const SignIn = () => {
 
       <div className="w-full max-w-md bg-white shadow-xl rounded-3xl p-8">
 
-        {/* LOGO */}
-        <div className="flex justify-center mb-4">
-          <img src={logo} className="h-16" />
-        </div>
-
+        {/* LOGO (FIXED) */}
+       
+<div className="flex justify-center mb-6">
+  <div className="p-3 bg-blue-50 rounded-2xl shadow-sm border border-blue-100">
+    <img
+      src={logo}
+      alt="Logo"
+      className="h-14 w-auto object-contain"
+    />
+  </div>
+</div>
         <h2 className="text-2xl font-bold text-center text-blue-600">
           Welcome Back
         </h2>
 
         {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
+
         {success && (
           <p className="text-green-600 flex items-center gap-2 mt-3">
             <FaCheckCircle /> {success}
@@ -98,7 +99,10 @@ const SignIn = () => {
               className="w-full p-3 border rounded-xl pr-10"
             />
 
-            <div onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 cursor-pointer">
+            <div
+              onClick={() => setShowPassword(!showPassword)}
+              className="absolute right-3 top-3 cursor-pointer"
+            >
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </div>
           </div>
@@ -109,9 +113,9 @@ const SignIn = () => {
           >
             {loading ? "Signing in..." : "Sign In"}
           </button>
+
         </form>
 
-        {/* FORGOT PASSWORD */}
         <div className="text-center mt-4">
           <button
             onClick={handleResetPassword}
@@ -125,12 +129,22 @@ const SignIn = () => {
           )}
         </div>
 
-        <div className="text-center mt-6 text-sm">
-          <Link to="/signup" className="text-blue-600 font-semibold">
-            Create Account
-          </Link>
-        </div>
+        <div className="text-center mt-6 text-sm space-y-2">
 
+  <Link to="/signup" className="text-blue-600 font-semibold">
+    Create Account
+  </Link>
+
+  <br />
+
+  <Link
+    to="/"
+    className="text-gray-500 text-sm hover:text-blue-600"
+  >
+    ← Back to Home
+  </Link>
+
+</div>
       </div>
     </div>
   );
