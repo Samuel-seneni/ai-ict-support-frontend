@@ -4,6 +4,8 @@ import { useAuth } from "../../contexts/AuthContext";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
 import { updateProfile } from "firebase/auth";
 
+import logo from "../../assets/Logo.png";
+
 const SignUp = () => {
   const { register } = useAuth();
   const navigate = useNavigate();
@@ -18,7 +20,9 @@ const SignUp = () => {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
@@ -28,6 +32,7 @@ const SignUp = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
 
     if (!form.firstName.trim() || !form.lastName.trim()) {
       return setError("First and Last name are required");
@@ -44,16 +49,19 @@ const SignUp = () => {
     try {
       setLoading(true);
 
-      // 1. Create user
       const userCredential = await register(form.email, form.password);
       const user = userCredential.user;
 
-      // 2. Set display name in Firebase
       await updateProfile(user, {
         displayName: `${form.firstName} ${form.lastName}`,
       });
 
-      navigate("/dashboard");
+      setSuccess("Account created successfully 🎉");
+
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
+
     } catch (err) {
       setError(err.message.replace("Firebase:", ""));
     } finally {
@@ -66,6 +74,11 @@ const SignUp = () => {
 
       <div className="w-full max-w-md bg-white shadow-xl rounded-3xl p-8">
 
+        {/* LOGO */}
+        <div className="text-center mb-4">
+          <img src={logo} alt="Logo" className="h-16 mx-auto" />
+        </div>
+
         <h2 className="text-3xl font-bold text-center text-blue-600">
           Create Account
         </h2>
@@ -74,6 +87,14 @@ const SignUp = () => {
           Smart ICT Desk Registration
         </p>
 
+        {/* SUCCESS */}
+        {success && (
+          <div className="bg-green-100 text-green-700 p-3 rounded-xl mt-4 text-sm">
+            {success}
+          </div>
+        )}
+
+        {/* ERROR */}
         {error && (
           <div className="bg-red-100 text-red-600 p-3 rounded-xl mt-4 text-sm">
             {error}
@@ -82,7 +103,6 @@ const SignUp = () => {
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
 
-          {/* FIRST NAME */}
           <input
             type="text"
             name="firstName"
@@ -92,7 +112,6 @@ const SignUp = () => {
             required
           />
 
-          {/* LAST NAME */}
           <input
             type="text"
             name="lastName"
@@ -102,7 +121,6 @@ const SignUp = () => {
             required
           />
 
-          {/* EMAIL */}
           <input
             type="email"
             name="email"
@@ -119,7 +137,7 @@ const SignUp = () => {
               name="password"
               placeholder="Password"
               onChange={handleChange}
-              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-400 pr-10"
+              className="w-full p-3 border rounded-xl pr-10 focus:ring-2 focus:ring-blue-400"
               required
             />
             <div
@@ -137,7 +155,7 @@ const SignUp = () => {
               name="confirmPassword"
               placeholder="Confirm Password"
               onChange={handleChange}
-              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-400 pr-10"
+              className="w-full p-3 border rounded-xl pr-10 focus:ring-2 focus:ring-blue-400"
               required
             />
             <div
@@ -148,7 +166,6 @@ const SignUp = () => {
             </div>
           </div>
 
-          {/* BUTTON */}
           <button
             type="submit"
             disabled={loading}
@@ -159,9 +176,7 @@ const SignUp = () => {
 
         </form>
 
-        {/* LINKS */}
         <div className="text-center mt-6 space-y-2">
-
           <p className="text-sm text-gray-600">
             Already have an account?
           </p>
@@ -175,7 +190,6 @@ const SignUp = () => {
           <Link to="/" className="text-gray-500 text-sm hover:text-blue-600">
             ← Back to Home
           </Link>
-
         </div>
 
       </div>

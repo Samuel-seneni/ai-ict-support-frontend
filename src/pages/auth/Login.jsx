@@ -1,20 +1,23 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
-import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { FaEye, FaEyeSlash, FaCheckCircle } from "react-icons/fa";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "../../firebase/firebase";
+
+import logo from "../../assets/logo.png";
 
 const SignIn = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const [form, setForm] = useState({
-    email: "",
-    password: "",
-  });
-
+  const [form, setForm] = useState({ email: "", password: "" });
   const [showPassword, setShowPassword] = useState(false);
+
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetMsg, setResetMsg] = useState("");
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
@@ -22,42 +25,36 @@ const SignIn = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (loading) return; // prevent double clicks
     setError("");
+    setSuccess("");
 
     try {
       setLoading(true);
+      await login(form.email, form.password);
 
-      const email = form.email.trim();
+      setSuccess("Login successful 🎉");
 
-      if (!email || !form.password) {
-        setError("Please fill in all fields");
-        return;
-      }
+      setTimeout(() => {
+        navigate("/dashboard");
+      }, 1000);
 
-      await login(email, form.password);
-
-      navigate("/dashboard");
     } catch (err) {
-      console.error(err);
-
-      // Firebase friendly error messages
-      let message = "Login failed. Please try again.";
-
-      if (err.code === "auth/user-not-found") {
-        message = "No account found with this email.";
-      } else if (err.code === "auth/wrong-password") {
-        message = "Incorrect password.";
-      } else if (err.code === "auth/invalid-email") {
-        message = "Invalid email format.";
-      } else if (err.code === "auth/too-many-requests") {
-        message = "Too many attempts. Try again later.";
-      }
-
-      setError(message);
+      setError("Login failed. Check credentials.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!form.email) {
+      return setError("Enter your email first");
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, form.email);
+      setResetMsg("Password reset email sent ✔");
+    } catch (err) {
+      setError("Failed to send reset email");
     }
   };
 
@@ -66,89 +63,75 @@ const SignIn = () => {
 
       <div className="w-full max-w-md bg-white shadow-xl rounded-3xl p-8">
 
-        <h2 className="text-3xl font-bold text-center text-blue-600">
+        {/* LOGO */}
+        <div className="flex justify-center mb-4">
+          <img src={logo} className="h-16" />
+        </div>
+
+        <h2 className="text-2xl font-bold text-center text-blue-600">
           Welcome Back
         </h2>
 
-        <p className="text-center text-gray-500 mt-2">
-          Sign in to Smart ICT Desk
-        </p>
-
-        {error && (
-          <div className="bg-red-100 text-red-600 p-3 rounded-xl mt-4 text-sm">
-            {error}
-          </div>
+        {error && <p className="text-red-500 text-sm mt-3">{error}</p>}
+        {success && (
+          <p className="text-green-600 flex items-center gap-2 mt-3">
+            <FaCheckCircle /> {success}
+          </p>
         )}
 
-        <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-3">
 
-          {/* EMAIL */}
           <input
-            type="email"
             name="email"
+            type="email"
             placeholder="Email"
-            value={form.email}
             onChange={handleChange}
-            className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-400"
-            required
+            className="w-full p-3 border rounded-xl"
           />
 
-          {/* PASSWORD */}
           <div className="relative">
             <input
-              type={showPassword ? "text" : "password"}
               name="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Password"
-              value={form.password}
               onChange={handleChange}
-              className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-400 pr-10"
-              required
+              className="w-full p-3 border rounded-xl pr-10"
             />
 
-            <div
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 top-3 cursor-pointer text-gray-500"
-            >
+            <div onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-3 cursor-pointer">
               {showPassword ? <FaEyeSlash /> : <FaEye />}
             </div>
           </div>
 
-          {/* BUTTON */}
           <button
-            type="submit"
             disabled={loading}
-            className={`w-full py-3 rounded-xl font-semibold transition ${
-              loading
-                ? "bg-blue-300 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
-            }`}
+            className="w-full bg-blue-600 text-white py-3 rounded-xl font-semibold"
           >
-            {loading ? "Signing In..." : "Sign In"}
+            {loading ? "Signing in..." : "Sign In"}
           </button>
-
         </form>
 
-        {/* LINKS */}
-        <div className="text-center mt-6 space-y-2">
+        {/* FORGOT PASSWORD */}
+        <div className="text-center mt-4">
+          <button
+            onClick={handleResetPassword}
+            className="text-sm text-blue-600 hover:underline"
+          >
+            Forgot Password?
+          </button>
 
-          <p className="text-sm text-gray-600">
-            Don’t have an account?
-          </p>
+          {resetMsg && (
+            <p className="text-green-600 text-sm mt-2">{resetMsg}</p>
+          )}
+        </div>
 
+        <div className="text-center mt-6 text-sm">
           <Link to="/signup" className="text-blue-600 font-semibold">
             Create Account
           </Link>
-
-          <br />
-
-          <Link to="/" className="text-gray-500 text-sm hover:text-blue-600">
-            ← Back to Home
-          </Link>
-
         </div>
 
       </div>
-
     </div>
   );
 };

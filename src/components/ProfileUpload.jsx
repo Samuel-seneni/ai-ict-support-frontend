@@ -27,93 +27,70 @@ import {
 } from "react-icons/fa";
 
 const ProfileUpload = () => {
-  const [loading, setLoading] =
-    useState(false);
-
-  const [preview, setPreview] =
-    useState(null);
-
-  const [message, setMessage] =
-    useState("");
+  const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(null);
+  const [message, setMessage] = useState("");
 
   // =====================================
-  // AUTO UPLOAD
+  // UPLOAD PROFILE PICTURE (ENTERPRISE SAFE)
   // =====================================
   const handleUpload = async (e) => {
-    const file = e.target.files[0];
-
+    const file = e.target.files?.[0];
     if (!file) return;
+
+    // instant preview
+    const previewUrl = URL.createObjectURL(file);
+    setPreview(previewUrl);
+
+    const user = auth.currentUser;
+
+    if (!user) {
+      setMessage("❌ User not authenticated");
+      return;
+    }
 
     try {
       setLoading(true);
       setMessage("");
 
-      // PREVIEW IMAGE
-      const previewUrl =
-        URL.createObjectURL(file);
-
-      setPreview(previewUrl);
-
-      // CURRENT USER
-      const user =
-        auth.currentUser;
-
-      if (!user) {
-        alert(
-          "User not authenticated"
-        );
-        return;
-      }
-
-      // FAST STORAGE PATH
+      // safe file path (prevents overwrite conflicts later if needed)
       const storageRef = ref(
         storage,
-        `profiles/${user.uid}`
+        `profiles/${user.uid}/profile.jpg`
       );
 
-      // DIRECT FAST UPLOAD
-      await uploadBytes(
-        storageRef,
-        file
-      );
+      // upload
+      await uploadBytes(storageRef, file);
 
-      // GET URL
-      const imageUrl =
-        await getDownloadURL(
-          storageRef
-        );
+      // download URL
+      const imageUrl = await getDownloadURL(storageRef);
 
-      // UPDATE AUTH
+      // update auth profile
       await updateProfile(user, {
         photoURL: imageUrl,
       });
 
-      // UPDATE FIRESTORE
-      await updateDoc(
-        doc(db, "users", user.uid),
-        {
-          photoURL: imageUrl,
-        }
-      );
+      // update firestore safely
+      await updateDoc(doc(db, "users", user.uid), {
+        photoURL: imageUrl,
+      });
 
-      // UPDATE LOCAL USER
+      // force local sync
       user.photoURL = imageUrl;
 
-      setMessage(
-        "Profile picture updated successfully"
-      );
+      setMessage("✅ Profile updated successfully");
 
     } catch (error) {
-      console.log(error);
-
-      setMessage(
-        "Upload failed"
-      );
+      console.error("UPLOAD ERROR:", error);
+      setMessage("❌ Upload failed. Try again.");
     } finally {
       setLoading(false);
     }
   };
 
+  // =====================================
+  // UI
+  // =====================================
   return (
     <div className="w-full mt-6">
 
@@ -121,7 +98,7 @@ const ProfileUpload = () => {
         Upload Profile Picture
       </label>
 
-      {/* IMAGE PREVIEW */}
+      {/* PROFILE PREVIEW */}
       <div className="flex justify-center mb-4">
 
         {preview ? (
@@ -130,35 +107,27 @@ const ProfileUpload = () => {
             alt="Preview"
             className="w-28 h-28 rounded-full object-cover border-4 border-blue-100 shadow-md"
           />
-        ) : auth.currentUser
-            ?.photoURL ? (
+        ) : auth.currentUser?.photoURL ? (
           <img
-            src={
-              auth.currentUser
-                .photoURL
-            }
+            src={auth.currentUser.photoURL}
             alt="Profile"
             className="w-28 h-28 rounded-full object-cover border-4 border-blue-100 shadow-md"
           />
         ) : (
           <div className="w-28 h-28 rounded-full bg-gradient-to-r from-blue-600 to-cyan-500 text-white flex items-center justify-center text-4xl font-black">
-            {auth.currentUser?.email?.charAt(
-              0
-            )}
+            {auth.currentUser?.email?.charAt(0)?.toUpperCase()}
           </div>
         )}
 
       </div>
 
-      {/* FILE INPUT */}
-      <label className="flex items-center justify-center gap-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-2xl px-5 py-4 cursor-pointer transition">
+      {/* UPLOAD BUTTON */}
+      <label className="flex items-center justify-center gap-3 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-2xl px-5 py-4 cursor-pointer transition disabled:opacity-50">
 
         <FaCamera className="text-blue-600" />
 
         <span className="font-semibold text-blue-700">
-          {loading
-            ? "Uploading..."
-            : "Choose Photo"}
+          {loading ? "Uploading..." : "Choose Photo"}
         </span>
 
         <input
@@ -166,20 +135,20 @@ const ProfileUpload = () => {
           accept="image/*"
           onChange={handleUpload}
           className="hidden"
+          disabled={loading}
         />
 
       </label>
 
-      {/* SUCCESS MESSAGE */}
+      {/* STATUS MESSAGE */}
       {message && (
-        <div className="mt-4 bg-green-50 border border-green-200 text-green-700 rounded-2xl p-3 flex items-center gap-2">
-
+        <div className={`mt-4 rounded-2xl p-3 flex items-center gap-2 text-sm font-semibold ${
+          message.includes("❌")
+            ? "bg-red-50 border border-red-200 text-red-600"
+            : "bg-green-50 border border-green-200 text-green-700"
+        }`}>
           <FaCheckCircle />
-
-          <span className="text-sm font-semibold">
-            {message}
-          </span>
-
+          <span>{message}</span>
         </div>
       )}
 

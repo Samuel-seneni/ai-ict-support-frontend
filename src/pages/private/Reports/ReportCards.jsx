@@ -4,31 +4,68 @@ import {
   FaExclamationTriangle,
   FaCheckCircle,
   FaUsers,
+  FaClock,
+  FaFire,
 } from "react-icons/fa";
 
-const Card = ({ title, value, icon, color }) => (
-  <div className={`${color} text-white p-6 rounded-2xl shadow`}>
-    <div className="flex justify-between">
+import { motion } from "framer-motion";
+
+const Card = ({ title, value, icon, gradient }) => (
+  <motion.div
+    whileHover={{ scale: 1.04 }}
+    className={`${gradient} text-white p-6 rounded-2xl shadow-lg`}
+  >
+    <div className="flex justify-between items-center">
       <div>
-        <p>{title}</p>
+        <p className="text-sm opacity-80">{title}</p>
         <h2 className="text-3xl font-black">{value}</h2>
       </div>
-      <div className="text-3xl opacity-60">{icon}</div>
+      <div className="text-4xl opacity-30">{icon}</div>
     </div>
-  </div>
+  </motion.div>
 );
 
-const ReportCards = ({ tickets, technicians }) => {
+const ReportCards = ({ tickets = [], technicians = [] }) => {
   const open = tickets.filter((t) => t.status === "Open").length;
   const resolved = tickets.filter((t) => t.status === "Resolved").length;
+  const critical = tickets.filter(
+    (t) => t.priority === "Critical"
+  ).length;
+
+  const overdue = tickets.filter(
+    (t) => t.slaDeadline && new Date(t.slaDeadline) < new Date()
+  ).length;
 
   return (
-    <div className="grid md:grid-cols-4 gap-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
 
-      <Card title="Total" value={tickets.length} icon={<FaTicketAlt />} color="bg-blue-500" />
-      <Card title="Open" value={open} icon={<FaExclamationTriangle />} color="bg-yellow-500" />
-      <Card title="Resolved" value={resolved} icon={<FaCheckCircle />} color="bg-green-500" />
-      <Card title="Techs" value={technicians.length} icon={<FaUsers />} color="bg-purple-500" />
+      <Card
+        title="Total Tickets"
+        value={tickets.length}
+        icon={<FaTicketAlt />}
+        gradient="bg-gradient-to-r from-blue-600 to-cyan-500"
+      />
+
+      <Card
+        title="Open Backlog"
+        value={open}
+        icon={<FaExclamationTriangle />}
+        gradient="bg-gradient-to-r from-yellow-500 to-orange-500"
+      />
+
+      <Card
+        title="Critical Alerts"
+        value={critical}
+        icon={<FaFire />}
+        gradient="bg-gradient-to-r from-red-500 to-pink-500"
+      />
+
+      <Card
+        title="SLA Breaches"
+        value={overdue}
+        icon={<FaClock />}
+        gradient="bg-gradient-to-r from-purple-600 to-indigo-500"
+      />
 
     </div>
   );

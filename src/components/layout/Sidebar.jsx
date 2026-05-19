@@ -22,11 +22,11 @@ const Sidebar = () => {
 
   const menu = [
     { name: "Dashboard", path: "/dashboard", icon: <FaHome /> },
-    { name: "Tickets", path: "/tickets", icon: <FaTicketAlt /> },
     { name: "Create Ticket", path: "/create-ticket", icon: <FaPlusCircle /> },
     { name: "Technicians", path: "/technicians", icon: <FaPlusCircle /> },
-    { name: "Reports Analytics", path: "/reports", icon: <FaChartBar /> },
     { name: "AI Assistant", path: "/ai", icon: <FaRobot /> },
+    { name: "Tickets", path: "/tickets", icon: <FaTicketAlt /> },
+    { name: "Reports Analytics", path: "/reports", icon: <FaChartBar /> },
     { name: "Settings Panel", path: "/settings", icon: <FaCog /> },
   ];
 
@@ -38,7 +38,7 @@ const Sidebar = () => {
 
         {!collapsed && (
           <h1 className="font-black text-sm tracking-widest">
-            ICT CONTROL
+            AI ICT SUPPORT
           </h1>
         )}
 
