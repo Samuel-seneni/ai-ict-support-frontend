@@ -1,26 +1,18 @@
 import React, { useEffect, useState } from "react";
 import {
   collection,
-  getDocs,
-  deleteDoc,
+  onSnapshot,
   doc,
   updateDoc,
 } from "firebase/firestore";
 
 import { db } from "../../firebase/firebase";
-
-import { FaSearch, FaTicketAlt } from "react-icons/fa";
+import { FaSearch } from "react-icons/fa";
 import { motion } from "framer-motion";
 
 const Tickets = () => {
   const [tickets, setTickets] = useState([]);
-  const [filteredTickets, setFilteredTickets] = useState([]);
-
-  const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("All");
-  const [priorityFilter, setPriorityFilter] = useState("All");
 
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -28,230 +20,268 @@ const Tickets = () => {
   const [technician, setTechnician] = useState("");
   const [statusUpdate, setStatusUpdate] = useState("");
 
-  // FETCH
+  // ================= REAL-TIME FETCH =================
   useEffect(() => {
-    const fetchTickets = async () => {
-      try {
-        const snapshot = await getDocs(collection(db, "tickets"));
+    const unsubscribe = onSnapshot(collection(db, "tickets"), (snapshot) => {
+      const data = snapshot.docs.map((docItem) => ({
+        id: docItem.id,
+        ...docItem.data(),
+      }));
 
-        const data = snapshot.docs.map((docItem) => ({
-          id: docItem.id,
-          ...docItem.data(),
-        }));
+      setTickets(data);
+    });
 
-        setTickets(data);
-        setFilteredTickets(data);
-      } catch (error) {
-        console.log(error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTickets();
+    return () => unsubscribe();
   }, []);
 
-  // FILTER
-  useEffect(() => {
-    let result = [...tickets];
+  // ================= AI ENGINE =================
+  const analyzeTicket = (ticket) => {
+    const text = `${ticket.title} ${ticket.description}`.toLowerCase();
 
-    if (search) {
-      result = result.filter((t) =>
-        t.title?.toLowerCase().includes(search.toLowerCase())
-      );
+    let aiPriority = "Low";
+    let aiCategory = ticket.category || "General";
+
+    if (
+      text.includes("server") ||
+      text.includes("down") ||
+      text.includes("network") ||
+      text.includes("urgent") ||
+      text.includes("critical")
+    ) {
+      aiPriority = "Critical";
+    } else if (
+      text.includes("password") ||
+      text.includes("login") ||
+      text.includes("error")
+    ) {
+      aiPriority = "High";
+    } else if (text.includes("slow") || text.includes("help")) {
+      aiPriority = "Medium";
     }
 
-    if (statusFilter !== "All") {
-      result = result.filter((t) => t.status === statusFilter);
-    }
+    if (text.includes("printer")) aiCategory = "Hardware";
+    if (text.includes("wifi") || text.includes("network")) aiCategory = "Network";
+    if (text.includes("email")) aiCategory = "Software";
 
-    if (priorityFilter !== "All") {
-      result = result.filter((t) => t.priority === priorityFilter);
-    }
+    return { aiPriority, aiCategory };
+  };
 
-    setFilteredTickets(result);
-  }, [search, statusFilter, priorityFilter, tickets]);
+  // ================= FILTER =================
+  const filterTickets = (list) =>
+    list.filter((t) =>
+      t.title?.toLowerCase().includes(search.toLowerCase())
+    );
 
-  // DELETE (FAST UPDATE)
-  const handleDelete = async (id) => {
-    try {
-      await deleteDoc(doc(db, "tickets", id));
+  // ================= KANBAN GROUPS =================
+  const openTickets = filterTickets(
+    tickets.filter((t) => t.status === "Open")
+  );
 
-      const updated = tickets.filter((t) => t.id !== id);
-      setTickets(updated);
-      setFilteredTickets(updated);
-    } catch (error) {
-      console.log(error);
-    }
+  const pendingTickets = filterTickets(
+    tickets.filter((t) => t.status === "Pending")
+  );
+
+  const resolvedTickets = filterTickets(
+    tickets.filter((t) => t.status === "Resolved")
+  );
+
+  // ================= MOVE TICKET =================
+  const moveTicket = async (ticket, newStatus) => {
+    const ref = doc(db, "tickets", ticket.id);
+
+    await updateDoc(ref, {
+      status: newStatus,
+      assignedTo: technician || ticket.assignedTo,
+    });
+  };
+
+  // ================= TICKET CARD =================
+  const TicketCard = ({ ticket }) => {
+    const ai = analyzeTicket(ticket);
+
+    return (
+      <motion.div
+        layout
+        className="bg-white p-4 rounded-2xl border shadow-sm hover:shadow-md transition"
+      >
+        <h3 className="font-bold text-gray-800">
+          {ticket.title}
+        </h3>
+
+        <p className="text-sm text-gray-500 mt-1">
+          {ticket.description?.slice(0, 80)}
+        </p>
+
+        {/* AI BADGES */}
+        <div className="flex gap-2 mt-3 flex-wrap">
+          <span
+            className={`text-xs px-2 py-1 rounded-full ${
+              ai.aiPriority === "Critical"
+                ? "bg-red-100 text-red-700"
+                : ai.aiPriority === "High"
+                ? "bg-orange-100 text-orange-700"
+                : ai.aiPriority === "Medium"
+                ? "bg-yellow-100 text-yellow-700"
+                : "bg-gray-100 text-gray-600"
+            }`}
+          >
+            AI: {ai.aiPriority}
+          </span>
+
+          <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
+            {ai.aiCategory}
+          </span>
+        </div>
+
+        {/* ACTIONS */}
+        <div className="flex gap-2 mt-4 flex-wrap">
+          <button
+            onClick={() => {
+              setSelectedTicket(ticket);
+              setModalOpen(true);
+            }}
+            className="px-3 py-1 bg-blue-100 text-blue-600 rounded-lg text-sm"
+          >
+            Manage
+          </button>
+
+          {ticket.status !== "Pending" && (
+            <button
+              onClick={() => moveTicket(ticket, "Pending")}
+              className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-lg text-sm"
+            >
+              Move
+            </button>
+          )}
+
+          {ticket.status !== "Resolved" && (
+            <button
+              onClick={() => moveTicket(ticket, "Resolved")}
+              className="px-3 py-1 bg-green-100 text-green-700 rounded-lg text-sm"
+            >
+              Resolve
+            </button>
+          )}
+        </div>
+      </motion.div>
+    );
   };
 
   return (
-    <div className="w-full max-w-[1200px] mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <div className="w-full min-h-screen bg-gray-50 px-4 py-6">
 
       {/* HEADER */}
-      <div className="mb-10">
-        <h1 className="text-3xl font-black text-gray-900">
-          ICT Support Tickets
+      <div className="text-center mb-8">
+        <h1 className="text-4xl font-black text-blue-600">
+          Jira AI Ticket Board
         </h1>
-        <p className="text-gray-600 mt-3">
-          Manage all ICT issues in real time.
+        <p className="text-gray-500 mt-2">
+          Smart ICT Helpdesk System with AI classification
         </p>
       </div>
 
-      {/* FILTERS */}
-      <div className="bg-white p-6 rounded-2xl shadow border mb-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+      {/* SEARCH */}
+      <div className="max-w-3xl mx-auto mb-8 relative">
+        <FaSearch className="absolute top-4 left-4 text-gray-400" />
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search tickets..."
+          className="w-full border p-4 pl-12 rounded-xl"
+        />
+      </div>
 
-          {/* SEARCH */}
-          <div className="relative">
-            <FaSearch className="absolute top-4 left-4 text-gray-400" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search tickets..."
-              className="w-full border p-4 pl-12 rounded-xl"
-            />
+      {/* ================= CENTERED BOARD ================= */}
+      <div className="flex justify-center">
+        <div className="w-full max-w-6xl bg-white border shadow-sm rounded-3xl p-6">
+
+          {/* BOARD TITLE */}
+          <div className="text-center mb-6">
+            <h2 className="text-xl font-black text-gray-800">
+              Ticket Workflow Board
+            </h2>
+            <p className="text-sm text-gray-500">
+              Manage ICT incidents using AI-assisted workflow
+            </p>
           </div>
 
-          {/* STATUS */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="border p-4 rounded-xl"
-          >
-            <option value="All">All Status</option>
-            <option value="Open">Open</option>
-            <option value="Pending">Pending</option>
-            <option value="Resolved">Resolved</option>
-          </select>
+          {/* KANBAN GRID */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-          {/* PRIORITY */}
-          <select
-            value={priorityFilter}
-            onChange={(e) => setPriorityFilter(e.target.value)}
-            className="border p-4 rounded-xl"
-          >
-            <option value="All">All Priority</option>
-            <option value="Low">Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
-            <option value="Critical">Critical</option>
-          </select>
+            {/* OPEN */}
+            <div className="bg-gray-50 border rounded-2xl p-4">
+              <h2 className="font-bold mb-4 text-blue-600 text-center">
+                Open ({openTickets.length})
+              </h2>
 
+              <div className="space-y-3">
+                {openTickets.map((t) => (
+                  <TicketCard key={t.id} ticket={t} />
+                ))}
+              </div>
+            </div>
+
+            {/* PENDING */}
+            <div className="bg-gray-50 border rounded-2xl p-4">
+              <h2 className="font-bold mb-4 text-yellow-600 text-center">
+                Pending ({pendingTickets.length})
+              </h2>
+
+              <div className="space-y-3">
+                {pendingTickets.map((t) => (
+                  <TicketCard key={t.id} ticket={t} />
+                ))}
+              </div>
+            </div>
+
+            {/* RESOLVED */}
+            <div className="bg-gray-50 border rounded-2xl p-4">
+              <h2 className="font-bold mb-4 text-green-600 text-center">
+                Resolved ({resolvedTickets.length})
+              </h2>
+
+              <div className="space-y-3">
+                {resolvedTickets.map((t) => (
+                  <TicketCard key={t.id} ticket={t} />
+                ))}
+              </div>
+            </div>
+
+          </div>
         </div>
       </div>
 
-      {/* CONTENT */}
-      {loading ? (
-        <p className="text-center text-gray-500">Loading tickets...</p>
-      ) : filteredTickets.length === 0 ? (
-        <div className="text-center py-20">
-          <FaTicketAlt className="text-5xl mx-auto text-gray-300" />
-          <p className="text-gray-500 mt-4">No tickets found</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-          {filteredTickets.map((ticket, index) => (
-            <motion.div
-              key={ticket.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="bg-white rounded-2xl shadow border p-5"
-            >
-
-              <h2 className="text-xl font-black">
-                {ticket.title}
-              </h2>
-
-              <p className="text-gray-600 mt-2">
-                {ticket.description}
-              </p>
-
-              <div className="grid grid-cols-2 gap-3 mt-5 text-sm">
-                <p><strong>Category:</strong> {ticket.category}</p>
-                <p><strong>Department:</strong> {ticket.department}</p>
-                <p><strong>Device:</strong> {ticket.deviceType}</p>
-                <p><strong>Created By:</strong> {ticket.createdBy}</p>
-              </div>
-
-              <div className="flex gap-3 mt-5 flex-wrap">
-
-                <span className="px-3 py-1 rounded-full text-sm bg-gray-100">
-                  {ticket.priority}
-                </span>
-
-                <span className="px-3 py-1 rounded-full text-sm bg-blue-100">
-                  {ticket.status}
-                </span>
-
-              </div>
-
-              <div className="flex gap-3 mt-6">
-
-                <button
-                  onClick={() => {
-                    setSelectedTicket(ticket);
-                    setModalOpen(true);
-                  }}
-                  className="px-4 py-2 bg-blue-100 text-blue-600 rounded-xl"
-                >
-                  View / Manage
-                </button>
-
-                <button
-                  onClick={() => handleDelete(ticket.id)}
-                  className="px-4 py-2 bg-red-100 text-red-600 rounded-xl"
-                >
-                  Delete
-                </button>
-
-              </div>
-
-            </motion.div>
-          ))}
-
-        </div>
-      )}
-
-      {/* MODAL */}
+      {/* ================= MODAL ================= */}
       {modalOpen && selectedTicket && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4">
+          <div className="bg-white p-6 rounded-2xl w-full max-w-xl">
 
-          <div className="bg-white w-full max-w-2xl rounded-2xl p-6">
-
-            <h2 className="text-2xl font-black mb-4">
+            <h2 className="text-xl font-bold mb-3">
               Manage Ticket
             </h2>
-
-            <p className="text-gray-600 mb-6">
-              {selectedTicket.title}
-            </p>
 
             <input
               value={technician}
               onChange={(e) => setTechnician(e.target.value)}
               placeholder="Assign Technician"
-              className="w-full border p-3 rounded-xl mb-4"
+              className="w-full border p-3 rounded-xl mb-3"
             />
 
             <select
               value={statusUpdate}
               onChange={(e) => setStatusUpdate(e.target.value)}
-              className="w-full border p-3 rounded-xl mb-6"
+              className="w-full border p-3 rounded-xl mb-4"
             >
               <option value="">Update Status</option>
-              <option value="Open">Open</option>
-              <option value="Pending">Pending</option>
-              <option value="Resolved">Resolved</option>
+              <option>Open</option>
+              <option>Pending</option>
+              <option>Resolved</option>
             </select>
 
             <div className="flex justify-between">
-
               <button
                 onClick={() => setModalOpen(false)}
-                className="px-5 py-3 bg-gray-200 rounded-xl"
+                className="px-4 py-2 bg-gray-200 rounded-xl"
               >
                 Close
               </button>
@@ -265,26 +295,15 @@ const Tickets = () => {
                     status: statusUpdate || selectedTicket.status,
                   });
 
-                  const updatedTickets = tickets.map((t) =>
-                    t.id === selectedTicket.id
-                      ? { ...t, assignedTo: technician, status: statusUpdate }
-                      : t
-                  );
-
-                  setTickets(updatedTickets);
-                  setFilteredTickets(updatedTickets);
-
                   setModalOpen(false);
                 }}
-                className="px-5 py-3 bg-blue-600 text-white rounded-xl"
+                className="px-4 py-2 bg-blue-600 text-white rounded-xl"
               >
-                Save Changes
+                Save
               </button>
-
             </div>
 
           </div>
-
         </div>
       )}
 

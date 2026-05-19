@@ -19,6 +19,7 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 import Dashboard from "../pages/private/Dashboard";
 import Tickets from "../pages/private/Tickets";
 import CreateTicket from "../pages/private/CreateTickets";
+import Technicians from "../pages/private/Technicians.jsx";
 
 // NEW PAGES (added)
 import Reports from "../pages/private/Reports/Reports.jsx";
@@ -53,11 +54,13 @@ const AppRoutes = () => {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/tickets" element={<Tickets />} />
         <Route path="/create-ticket" element={<CreateTicket />} />
+        <Route path="/technicians" element={<Technicians />} />
 
         {/* NEW ROUTES */}
         <Route path="/reports" element={<Reports />} />
         <Route path="/ai" element={<AI />} />
         <Route path="/settings" element={<Settings />} />
+
       </Route>
 
     </Routes>

@@ -1,21 +1,10 @@
 import React, { useState } from "react";
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-  doc,
-  updateDoc,
-  increment,
-} from "firebase/firestore";
+import { createEnterpriseTicket } from "../../services/tickets/createEnterpriseTicket";
 
 import { db } from "../../firebase/firebase";
 import { useAuth } from "../../contexts/AuthContext";
 
 import { FaTicketAlt, FaCheckCircle } from "react-icons/fa";
-
-import { classifyTicket } from "../../services/ai/classifyTicket";
-import { smartAssign } from "../../services/ai/smartAssign";
-import { generateSLA } from "../../services/ai/slaService";
 
 const CreateTickets = () => {
   const { user } = useAuth();
@@ -27,8 +16,10 @@ const CreateTickets = () => {
     deviceType: "",
   });
 
-  const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
+
+  // ⚡ OPTIMISTIC UI STATE
+  const [optimisticTickets, setOptimisticTickets] = useState([]);
 
   const handleChange = (e) => {
     setForm((prev) => ({
@@ -37,81 +28,101 @@ const CreateTickets = () => {
     }));
   };
 
+  // ================= ENTERPRISE INSTANT UX =================
   const handleSubmit = async (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!form.title || !form.description) {
-      setSuccess("Please fill in required fields.");
-      return;
-    }
+  if (!form.title || !form.description) {
+    setSuccess("Please fill in required fields.");
+    return;
+  }
 
-    setLoading(true);
-    setSuccess("");
+  const tempId = Date.now().toString();
 
-    try {
-      // AI classification
-      const ai = await classifyTicket(
-        form.title + " " + form.description
-      );
-
-      const technician = await smartAssign(ai.category);
-      const slaDeadline = generateSLA(ai.priority);
-
-      // Save ticket
-      await addDoc(collection(db, "tickets"), {
-        ...form,
-
-        category: ai.category,
-        priority: ai.priority,
-
-        status: "Open",
-
-        createdBy: user?.email || "Unknown",
-        userId: user?.uid || null,
-
-        assignedTo: technician?.id || null,
-        assignedName: technician?.name || "Unassigned",
-
-        slaDeadline,
-        createdAt: serverTimestamp(),
-      });
-
-      // Update technician workload
-      if (technician?.id) {
-        await updateDoc(doc(db, "technicians", technician.id), {
-          activeTickets: increment(1),
-        });
-      }
-
-      setSuccess(
-        technician
-          ? `Ticket created & assigned to ${technician.name}`
-          : "Ticket created (no technician available)"
-      );
-
-      // reset form
-      setForm({
-        title: "",
-        description: "",
-        department: "",
-        deviceType: "",
-      });
-    } catch (err) {
-      console.log(err);
-      setSuccess("Error creating ticket. Try again.");
-    }
-
-    setLoading(false);
+  // ================= OPTIMISTIC TICKET =================
+  const tempTicket = {
+    id: tempId,
+    ...form,
+    status: "Open",
+    priority: "Processing...",
+    category: "AI Analysis...",
+    createdBy: user?.email || "Unknown",
+    assignedName: "AI assigning...",
+    isOptimistic: true,
   };
 
+  // ================= INSTANT UI =================
+  setOptimisticTickets((prev) => [
+    tempTicket,
+    ...prev,
+  ]);
+
+  setSuccess(
+    "✅ Ticket created instantly. AI processing..."
+  );
+
+  // ================= RESET FORM =================
+  setForm({
+    title: "",
+    description: "",
+    department: "",
+    deviceType: "",
+  });
+
+  try {
+
+    // ================= SHARED ENGINE =================
+    const result =
+      await createEnterpriseTicket({
+        formData: form,
+        user,
+        source: "Create Ticket Page",
+      });
+
+    // REMOVE TEMP TICKET
+    setOptimisticTickets((prev) =>
+      prev.filter((t) => t.id !== tempId)
+    );
+
+    setSuccess(
+      result.technician
+        ? `✅ Ticket assigned to ${result.technician.name}`
+        : "✅ Ticket created successfully"
+    );
+
+    setTimeout(() => {
+      setSuccess("");
+    }, 4000);
+
+  } catch (err) {
+    console.log(err);
+
+    setOptimisticTickets((prev) =>
+      prev.filter((t) => t.id !== tempId)
+    );
+
+    setSuccess(
+      "❌ Error creating ticket"
+    );
+  }
+};
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-6">
-      <div className="w-full max-w-xl bg-white p-8 rounded-3xl shadow-xl">
+    <div className="min-h-screen bg-gray-50 flex justify-center p-6">
+
+      {/* SAAS CARD */}
+      <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl border p-8">
 
         {/* HEADER */}
-        <h1 className="text-2xl font-black mb-6 flex items-center gap-2">
-          <FaTicketAlt /> Enterprise Ticket System
-        </h1>
+        <div className="text-center mb-6">
+          <h1 className="text-3xl font-black text-blue-600 flex justify-center items-center gap-2">
+            <FaTicketAlt />
+            Create Ticket
+          </h1>
+          <p className="text-gray-500 mt-2">
+            Enterprise AI-powered instant ticket system
+          </p>
+        </div>
 
         {/* SUCCESS MESSAGE */}
         {success && (
@@ -126,18 +137,19 @@ const CreateTickets = () => {
 
           <input
             name="title"
-            placeholder="Title *"
+            placeholder="Ticket Title *"
             value={form.title}
             onChange={handleChange}
-            className="w-full p-3 border rounded-xl"
+            className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-200"
           />
 
           <textarea
             name="description"
-            placeholder="Description *"
+            placeholder="Describe the issue *"
             value={form.description}
             onChange={handleChange}
-            className="w-full p-3 border rounded-xl"
+            className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-200"
+            rows={4}
           />
 
           <select
@@ -150,7 +162,7 @@ const CreateTickets = () => {
             <option value="ICT">ICT</option>
             <option value="Admin">Admin</option>
             <option value="Finance">Finance</option>
-            <option value="Human Resource">Human Resource</option>
+            <option value="HR">HR</option>
           </select>
 
           <select
@@ -160,22 +172,42 @@ const CreateTickets = () => {
             className="w-full p-3 border rounded-xl"
           >
             <option value="">Select Device</option>
-            <option value="Desktop">Desktop Computer</option>
+            <option value="Desktop">Desktop</option>
             <option value="Laptop">Laptop</option>
             <option value="Printer">Printer</option>
             <option value="Router">Router</option>
           </select>
 
+          {/* BUTTON */}
           <button
-            disabled={loading}
-            className={`w-full p-3 rounded-xl font-bold text-white transition ${
-              loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700"
-            }`}
+            type="submit"
+            className="w-full p-3 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 transition"
           >
-            {loading ? "Processing..." : "Create Ticket"}
+            Create Ticket
           </button>
 
         </form>
+
+        {/* ================= OPTIONAL OPTIMISTIC PREVIEW ================= */}
+        {optimisticTickets.length > 0 && (
+          <div className="mt-6">
+            <h3 className="text-sm font-bold text-gray-600 mb-2">
+              Live Processing Queue
+            </h3>
+
+            {optimisticTickets.map((t) => (
+              <div
+                key={t.id}
+                className="p-3 border rounded-xl mb-2 bg-gray-50 border-dashed opacity-70"
+              >
+                <p className="font-semibold">{t.title}</p>
+                <p className="text-xs text-gray-500">
+                  AI processing...
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
 
       </div>
     </div>
